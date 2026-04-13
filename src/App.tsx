@@ -22,12 +22,16 @@ import {
   Type,
   Image as ImageIcon,
   ChevronRight,
-  ChevronDown
+  ChevronDown,
+  Upload,
+  Link as LinkIcon,
+  Plus,
+  Wand2
 } from 'lucide-react';
 
 // --- Types ---
 
-type AppStep = 'mode-selection' | 'replicate-flow' | 'input-details' | 'storyboard' | 'generating' | 'completed';
+type AppStep = 'replicate-flow' | 'storyboard' | 'generating' | 'completed';
 type GenerationMode = 'replicate' | 'new';
 type VideoType = 'mashup' | 'talking-head' | 'pure-showcase';
 
@@ -106,8 +110,8 @@ const INITIAL_TIMELINE: Segment[] = [
 // --- Components ---
 
 export default function App() {
-  const [step, setStep] = useState<AppStep>('mode-selection');
-  const [mode, setMode] = useState<GenerationMode | null>(null);
+  const [step, setStep] = useState<'replicate-flow' | 'storyboard' | 'generating' | 'completed'>('replicate-flow');
+  const [mode, setMode] = useState<'replicate' | 'generate'>('replicate');
   const [timeline, setTimeline] = useState<Segment[]>(INITIAL_TIMELINE);
   const [selectedClip, setSelectedClip] = useState<{segId: number, clipId: string} | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -115,6 +119,7 @@ export default function App() {
 
   // Replicate Flow States
   const [replicateSubStep, setReplicateSubStep] = useState(1);
+  const [videoUrl, setVideoUrl] = useState('');
   const [videoType, setVideoType] = useState<VideoType | null>(null);
   const [productSource, setProductSource] = useState<'current' | 'new'>('current');
   const [sku, setSku] = useState('');
@@ -213,12 +218,10 @@ export default function App() {
   const handleBack = () => {
     if (step === 'replicate-flow') {
       if (replicateSubStep > 1) setReplicateSubStep(prev => prev - 1);
-      else setStep('mode-selection');
     }
-    else if (step === 'input-details') setStep('mode-selection');
     else if (step === 'storyboard') {
-      if (mode === 'replicate') setStep('replicate-flow');
-      else setStep('input-details');
+      setStep('replicate-flow');
+      setReplicateSubStep(2); // Go back to the last config step
     }
     else if (step === 'generating') setStep('storyboard');
     else if (step === 'completed') setStep('storyboard');
@@ -264,15 +267,15 @@ export default function App() {
           
           <div className="flex items-center gap-8">
             <nav className="hidden md:flex items-center gap-1">
-              {['模式选择', '需求输入', '脚本规划', '混剪生成'].map((label, i) => {
-                const steps: AppStep[] = ['mode-selection', 'input-details', 'storyboard', 'generating'];
+              {['视频分析', '脚本规划', '混剪生成'].map((label, i) => {
+                const steps: AppStep[] = ['replicate-flow', 'storyboard', 'generating'];
                 const isActive = steps.indexOf(step) >= i;
                 return (
                   <div key={label} className="flex items-center">
                     <span className={`text-xs font-medium px-3 py-1 rounded-full transition-colors ${isActive ? 'text-orange-400 bg-orange-400/10' : 'text-white/30'}`}>
                       {label}
                     </span>
-                    {i < 3 && <ChevronRight className="w-3 h-3 text-white/10 mx-1" />}
+                    {i < 2 && <ChevronRight className="w-3 h-3 text-white/10 mx-1" />}
                   </div>
                 );
               })}
@@ -286,55 +289,6 @@ export default function App() {
 
       <main className="max-w-7xl mx-auto px-6 py-8">
         <AnimatePresence mode="wait">
-          {step === 'mode-selection' && (
-            <motion.div 
-              key="mode"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="max-w-4xl mx-auto mt-12"
-            >
-              <div className="text-center mb-12">
-                <h2 className="text-4xl font-bold mb-4">开始你的广告创作</h2>
-                <p className="text-white/50">选择一种创作模式，AI 将协助你完成从脚本到成片的全部流程</p>
-              </div>
-
-              <div className="grid md:grid-cols-2 gap-6">
-                <button 
-                  onClick={() => { setMode('replicate'); handleNext(); }}
-                  className={`group relative p-8 rounded-3xl border-2 transition-all text-left overflow-hidden ${mode === 'replicate' ? 'border-orange-500 bg-orange-500/5' : 'border-white/5 bg-white/5 hover:border-white/20'}`}
-                >
-                  <div className="relative z-10">
-                    <div className="w-14 h-14 bg-blue-500/20 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                      <Video className="w-7 h-7 text-blue-400" />
-                    </div>
-                    <h3 className="text-xl font-bold mb-2">视频复刻 (Remix)</h3>
-                    <p className="text-sm text-white/50 leading-relaxed">上传一个现有的爆款视频，AI 将分析其结构、节奏和口播，并为你生成全新的复刻版本。</p>
-                  </div>
-                  <div className="absolute top-0 right-0 p-6 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <ArrowRight className="w-6 h-6 text-orange-500" />
-                  </div>
-                </button>
-
-                <button 
-                  onClick={() => { setMode('new'); handleNext(); }}
-                  className={`group relative p-8 rounded-3xl border-2 transition-all text-left overflow-hidden ${mode === 'new' ? 'border-orange-500 bg-orange-500/5' : 'border-white/5 bg-white/5 hover:border-white/20'}`}
-                >
-                  <div className="relative z-10">
-                    <div className="w-14 h-14 bg-purple-500/20 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                      <PlusCircle className="w-7 h-7 text-purple-400" />
-                    </div>
-                    <h3 className="text-xl font-bold mb-2">全新生成 (Fresh)</h3>
-                    <p className="text-sm text-white/50 leading-relaxed">只需输入产品信息和营销目标，AI 将基于 AIDA 逻辑从零开始规划镜头、撰写脚本并生成视频。</p>
-                  </div>
-                  <div className="absolute top-0 right-0 p-6 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <ArrowRight className="w-6 h-6 text-orange-500" />
-                  </div>
-                </button>
-              </div>
-            </motion.div>
-          )}
-
           {step === 'replicate-flow' && (
             <motion.div 
               key="replicate"
@@ -344,10 +298,14 @@ export default function App() {
               className="max-w-3xl mx-auto"
             >
               <div className="flex items-center justify-between mb-8">
-                <button onClick={handleBack} className="flex items-center gap-2 text-white/40 hover:text-white transition-colors">
-                  <ArrowLeft className="w-4 h-4" />
-                  <span className="text-sm font-medium">返回</span>
-                </button>
+                {replicateSubStep > 1 ? (
+                  <button onClick={handleBack} className="flex items-center gap-2 text-white/40 hover:text-white transition-colors">
+                    <ArrowLeft className="w-4 h-4" />
+                    <span className="text-sm font-medium">返回</span>
+                  </button>
+                ) : (
+                  <div /> // Placeholder to keep progress bars on the right
+                )}
                 <div className="flex gap-2">
                   {[1, 2, 3].map(i => (
                     <div key={i} className={`w-12 h-1.5 rounded-full transition-colors ${replicateSubStep >= i ? 'bg-orange-500' : 'bg-white/10'}`} />
@@ -359,8 +317,8 @@ export default function App() {
                 {replicateSubStep === 1 && (
                   <div className="space-y-8">
                     <div>
-                      <h2 className="text-2xl font-bold mb-2">上传复刻营销视频</h2>
-                      <p className="text-sm text-white/40">AI 将自动识别视频类型并分析结构</p>
+                      <h2 className="text-2xl font-bold mb-2">开始复刻创作</h2>
+                      <p className="text-sm text-white/40">上传视频文件或输入视频链接，AI 将自动分析结构</p>
                     </div>
 
                     <div 
@@ -399,11 +357,53 @@ export default function App() {
                         ) : (
                           <motion.div key="success" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="text-center">
                             <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4"><CheckCircle2 className="w-8 h-8 text-green-500" /></div>
-                            <p className="text-sm font-bold text-green-400">识别成功：{videoType === 'mashup' ? '混剪视频' : '其他类型'}</p>
-                            {videoType !== 'mashup' && <p className="text-xs text-orange-400 mt-2 bg-orange-400/10 py-1 px-3 rounded-full inline-block">口播/纯展示模式还在开发中</p>}
+                            <p className="text-sm font-bold text-green-400 mb-2">识别成功：{videoType === 'mashup' ? '混剪视频' : '其他类型'}</p>
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setUploadStatus('idle');
+                                setVideoUrl('');
+                                setUploadedFile(null);
+                              }}
+                              className="text-xs text-white/40 hover:text-orange-500 transition-colors underline underline-offset-4"
+                            >
+                              重新上传或更换链接
+                            </button>
+                            {videoType !== 'mashup' && <p className="text-xs text-orange-400 mt-4 bg-orange-400/10 py-1 px-3 rounded-full inline-block">口播/纯展示模式还在开发中</p>}
                           </motion.div>
                         )}
                       </AnimatePresence>
+                    </div>
+
+                    <div className="relative">
+                      <div className="absolute inset-0 flex items-center">
+                        <div className="w-full border-t border-white/5"></div>
+                      </div>
+                      <div className="relative flex justify-center text-xs uppercase">
+                        <span className="bg-[#16181d] px-4 text-white/20">或者输入视频链接</span>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-3">
+                      <div className="relative flex-1">
+                        <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
+                          <LinkIcon className="w-4 h-4 text-white/20" />
+                        </div>
+                        <input 
+                          type="text"
+                          value={videoUrl}
+                          onChange={(e) => setVideoUrl(e.target.value)}
+                          placeholder="粘贴抖音、快手、视频号等视频链接..."
+                          className="w-full bg-white/5 border border-white/10 rounded-xl py-4 pl-12 pr-4 text-sm focus:outline-none focus:border-orange-500/50 transition-colors"
+                        />
+                      </div>
+                      <button 
+                        onClick={() => videoUrl && setUploadStatus('analyzing')}
+                        disabled={!videoUrl || (uploadStatus !== 'idle' && uploadStatus !== 'success')}
+                        className="px-8 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 disabled:hover:bg-orange-500 text-white font-bold rounded-xl transition-colors"
+                      >
+                        解析
+                      </button>
                     </div>
 
                     <button 
@@ -422,48 +422,50 @@ export default function App() {
                     <div className="space-y-6">
                       <div>
                         <h2 className="text-xl font-bold mb-1">配置产品信息</h2>
-                        <p className="text-xs text-white/40">选择基于当前产品还是新产品</p>
+                        <p className="text-xs text-white/40">选择要推广的商品，AI 将自动获取卖点</p>
                       </div>
-
-                      <div className="grid grid-cols-2 gap-4">
-                        <button 
-                          onClick={() => setProductSource('current')}
-                          className={`p-4 rounded-2xl border-2 transition-all text-left ${productSource === 'current' ? 'border-orange-500 bg-orange-500/5' : 'border-white/5 bg-white/5 hover:border-white/10'}`}
-                        >
-                          <h4 className="font-bold mb-1">当前产品</h4>
-                          <p className="text-[10px] text-white/40">自动带出当前产品卖点</p>
-                        </button>
-                        <button 
-                          onClick={() => setProductSource('new')}
-                          className={`p-4 rounded-2xl border-2 transition-all text-left ${productSource === 'new' ? 'border-orange-500 bg-orange-500/5' : 'border-white/5 bg-white/5 hover:border-white/10'}`}
-                        >
-                          <h4 className="font-bold mb-1">新产品</h4>
-                          <p className="text-[10px] text-white/40">选择 SKU 并带出卖点</p>
-                        </button>
-                      </div>
-
-                      {productSource === 'new' && (
-                        <div className="space-y-4">
-                          <label className="block text-xs font-bold text-white/40 uppercase tracking-widest">选择 SKU</label>
-                          <select 
-                            value={sku} 
-                            onChange={(e) => setSku(e.target.value)}
-                            className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-orange-500 appearance-none"
-                          >
-                            <option value="">请选择 SKU...</option>
-                            <option value="sku-001">SKU-001: 强力地坪漆 (灰色)</option>
-                            <option value="sku-002">SKU-002: 艺术水泥漆 (米色)</option>
-                          </select>
-                        </div>
-                      )}
 
                       <div className="space-y-4">
-                        <label className="block text-xs font-bold text-white/40 uppercase tracking-widest">产品卖点</label>
+                        <div className="flex gap-3">
+                          <div className="relative flex-1">
+                            <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
+                              <Plus className="w-4 h-4 text-white/20" />
+                            </div>
+                            <select 
+                              value={sku} 
+                              onChange={(e) => setSku(e.target.value)}
+                              className="w-full bg-black/40 border border-white/10 rounded-xl pl-12 pr-4 py-3 text-sm focus:outline-none focus:border-orange-500 appearance-none"
+                            >
+                              <option value="">选择已有商品或输入 SKU...</option>
+                              <option value="sku-001">强力地坪漆 (灰色) - SKU: 001</option>
+                              <option value="sku-002">艺术水泥漆 (米色) - SKU: 002</option>
+                              <option value="custom">手动输入 SKU 编码</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        {sku === 'custom' && (
+                          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
+                            <input 
+                              type="text"
+                              placeholder="请输入 SKU 编码..."
+                              className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-orange-500"
+                            />
+                          </motion.div>
+                        )}
+                      </div>
+
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <label className="block text-xs font-bold text-white/40 uppercase tracking-widest">产品卖点</label>
+                          <button className="text-[10px] text-orange-500 hover:text-orange-400 font-bold">自动提取</button>
+                        </div>
                         <textarea 
                           rows={3} 
                           value={sellingPoints}
                           onChange={(e) => setSellingPoints(e.target.value)}
                           className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-orange-500 resize-none"
+                          placeholder="输入或确认产品核心卖点..."
                         />
                       </div>
                     </div>
