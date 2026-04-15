@@ -27,12 +27,23 @@ import {
   Link as LinkIcon,
   Plus,
   Wand2,
-  X
+  X,
+  Globe,
+  ShoppingBag,
+  Library,
+  Search,
+  RotateCcw,
+  FileText,
+  MoreHorizontal,
+  ExternalLink,
+  Settings,
+  ChevronLeft,
+  Users
 } from 'lucide-react';
 
 // --- Types ---
 
-type AppStep = 'replicate-flow' | 'storyboard' | 'generating' | 'completed';
+type AppStep = 'replicate-flow' | 'storyboard' | 'generating' | 'completed' | 'library-dashboard';
 type GenerationMode = 'replicate' | 'new';
 type VideoType = 'mashup' | 'talking-head' | 'pure-showcase';
 
@@ -153,6 +164,8 @@ export default function App() {
   const [aiGenPrompt, setAiGenPrompt] = useState('');
   const [aiGenResult, setAiGenResult] = useState<string | null>(null);
   const [isAiGenLoading, setIsAiGenLoading] = useState(false);
+  const [isDownloadDropdownOpen, setIsDownloadDropdownOpen] = useState(false);
+  const [dashboardTab, setDashboardTab] = useState<'ai-edit' | 'img-translate' | 'subtitle' | 'viral-replicate'>('viral-replicate');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Replicate Flow States
@@ -546,7 +559,7 @@ export default function App() {
                           type="text"
                           value={videoUrl}
                           onChange={(e) => setVideoUrl(e.target.value)}
-                          placeholder="粘贴抖音、快手、视频号等视频链接..."
+                          placeholder="粘贴 tt、fb 等视频链接..."
                           className="w-full bg-white/5 border border-white/10 rounded-xl py-4 pl-12 pr-4 text-sm focus:outline-none focus:border-orange-500/50 transition-colors"
                         />
                       </div>
@@ -1196,10 +1209,45 @@ export default function App() {
             >
               <div className="flex items-center justify-between mb-12">
                 <h2 className="text-4xl font-bold tracking-tight">生成完成！</h2>
-                <div className="flex gap-4">
-                  <button className="px-10 py-3.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-sm font-bold shadow-lg shadow-orange-500/20 transition-all flex items-center gap-2">
-                    下载视频 <ChevronDown className="w-4 h-4" />
+                <div className="relative">
+                  <button 
+                    onClick={() => setIsDownloadDropdownOpen(!isDownloadDropdownOpen)}
+                    className="px-8 py-3.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-sm font-bold shadow-lg shadow-orange-500/20 transition-all flex items-center gap-2"
+                  >
+                    到视频库下载 <ChevronDown className={`w-4 h-4 transition-transform ${isDownloadDropdownOpen ? 'rotate-180' : ''}`} />
                   </button>
+                  
+                  <AnimatePresence>
+                    {isDownloadDropdownOpen && (
+                      <motion.div 
+                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                        className="absolute right-0 mt-3 w-56 bg-[#1c1e24] border border-white/10 rounded-2xl overflow-hidden shadow-2xl z-50"
+                      >
+                        {[
+                          { label: '独立站', icon: <Globe className="w-4 h-4" /> },
+                          { label: 'TikTok', icon: <Video className="w-4 h-4" /> },
+                          { label: '亚马逊', icon: <ShoppingBag className="w-4 h-4" /> },
+                          { label: '品牌视频库', icon: <Library className="w-4 h-4" /> },
+                        ].map((option) => (
+                          <button
+                            key={option.label}
+                            onClick={() => {
+                              setIsDownloadDropdownOpen(false);
+                              // Navigate to dashboard
+                              setStep('library-dashboard');
+                              setDashboardTab('viral-replicate');
+                            }}
+                            className="w-full flex items-center gap-3 px-5 py-4 text-sm font-medium text-white/60 hover:text-white hover:bg-white/5 transition-all text-left"
+                          >
+                            <span className="text-orange-500/60">{option.icon}</span>
+                            {option.label}
+                          </button>
+                        ))}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
               </div>
 
@@ -1214,6 +1262,247 @@ export default function App() {
                   <button className="w-20 h-20 bg-white/10 hover:bg-white/20 backdrop-blur-xl rounded-full flex items-center justify-center transition-all group-hover:scale-110">
                     <Play className="w-8 h-8 text-white fill-white" />
                   </button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {step === 'library-dashboard' && (
+            <motion.div 
+              key="library-dashboard"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="w-full min-h-screen bg-[#f4f7f9] text-[#333]"
+            >
+              {/* Top Navigation Bar (Mock) */}
+              <div className="bg-[#001529] text-white px-6 py-3 flex items-center justify-between">
+                <div className="flex items-center gap-8">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 bg-blue-600 rounded flex items-center justify-center">
+                      <Video className="w-5 h-5 text-white" />
+                    </div>
+                    <span className="font-bold text-lg tracking-tight">RIGHT TEC</span>
+                  </div>
+                  <nav className="flex items-center gap-6 text-sm font-medium text-white/70">
+                    <span className="hover:text-white cursor-pointer flex items-center gap-1">产品中心 <ChevronDown className="w-3 h-3" /></span>
+                    <span className="hover:text-white cursor-pointer flex items-center gap-1">刊登中心 <ChevronDown className="w-3 h-3" /></span>
+                    <span className="hover:text-white cursor-pointer flex items-center gap-1">客服中心 <ChevronDown className="w-3 h-3" /></span>
+                    <span className="hover:text-white cursor-pointer flex items-center gap-1">账号中心 <ChevronDown className="w-3 h-3" /></span>
+                    <span className="text-white border-b-2 border-blue-500 pb-1">精品业务 <ChevronDown className="w-3 h-3" /></span>
+                  </nav>
+                </div>
+                <div className="flex items-center gap-4">
+                  <div className="w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center">
+                    <Users className="w-4 h-4" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Breadcrumbs / Sub-tabs Bar */}
+              <div className="bg-white border-b border-gray-200 px-6 py-2 flex items-center gap-2 text-xs text-gray-400">
+                <ChevronLeft className="w-4 h-4 cursor-pointer hover:text-gray-600" />
+                <ChevronRight className="w-4 h-4 cursor-pointer hover:text-gray-600" />
+                <RotateCcw className="w-3 h-3 cursor-pointer hover:text-gray-600 ml-2" />
+                <span className="mx-2">/</span>
+                <span className="hover:text-gray-600 cursor-pointer">视频库</span>
+                <span className="mx-2">/</span>
+                <span className="hover:text-gray-600 cursor-pointer">独立站视频库</span>
+                <span className="mx-2">/</span>
+                <span className="bg-blue-50 text-blue-600 px-2 py-1 rounded">AI素材剪辑</span>
+              </div>
+
+              {/* Main Content Area */}
+              <div className="p-4 space-y-4">
+                {/* Tabs */}
+                <div className="flex items-center gap-1 border-b border-gray-200">
+                  {[
+                    { id: 'ai-edit', label: '视频AI剪辑' },
+                    { id: 'img-translate', label: '图片AI翻译' },
+                    { id: 'subtitle', label: '视频字幕提取' },
+                    { id: 'viral-replicate', label: '爆款视频复刻' },
+                  ].map(tab => (
+                    <button
+                      key={tab.id}
+                      onClick={() => setDashboardTab(tab.id as any)}
+                      className={`px-6 py-3 text-sm font-medium transition-all relative ${
+                        dashboardTab === tab.id 
+                          ? 'text-blue-600' 
+                          : 'text-gray-500 hover:text-gray-700'
+                      }`}
+                    >
+                      {tab.label}
+                      {dashboardTab === tab.id && (
+                        <motion.div layoutId="activeTab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600" />
+                      )}
+                      {tab.id === 'viral-replicate' && (
+                        <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full border-2 border-white" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Filters */}
+                <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100 space-y-4">
+                  <div className="grid grid-cols-6 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-xs text-gray-400">主SKU</label>
+                      <div className="relative">
+                        <select className="w-full bg-gray-50 border border-gray-200 rounded px-3 py-1.5 text-sm appearance-none">
+                          <option>主SKU</option>
+                        </select>
+                        <ChevronDown className="absolute right-2 top-2.5 w-3 h-3 text-gray-400" />
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs text-gray-400">关键词</label>
+                      <input type="text" placeholder="请输入关键词" className="w-full bg-gray-50 border border-gray-200 rounded px-3 py-1.5 text-sm" />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs text-gray-400">账户ID</label>
+                      <div className="relative">
+                        <select className="w-full bg-gray-50 border border-gray-200 rounded px-3 py-1.5 text-sm appearance-none">
+                          <option>全部</option>
+                        </select>
+                        <ChevronDown className="absolute right-2 top-2.5 w-3 h-3 text-gray-400" />
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs text-gray-400">状态</label>
+                      <div className="relative">
+                        <select className="w-full bg-gray-50 border border-gray-200 rounded px-3 py-1.5 text-sm appearance-none">
+                          <option>全部</option>
+                        </select>
+                        <ChevronDown className="absolute right-2 top-2.5 w-3 h-3 text-gray-400" />
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs text-gray-400">目标语种</label>
+                      <div className="relative">
+                        <select className="w-full bg-gray-50 border border-gray-200 rounded px-3 py-1.5 text-sm appearance-none">
+                          <option>全部</option>
+                        </select>
+                        <ChevronDown className="absolute right-2 top-2.5 w-3 h-3 text-gray-400" />
+                      </div>
+                    </div>
+                    <div className="flex items-end gap-2">
+                      <button className="bg-blue-500 text-white px-4 py-1.5 rounded text-sm font-medium hover:bg-blue-600 transition-colors">查询</button>
+                      <button className="bg-red-400 text-white px-4 py-1.5 rounded text-sm font-medium hover:bg-red-500 transition-colors">重置</button>
+                    </div>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex items-center justify-between pt-4 border-t border-gray-50">
+                    <div className="flex items-center gap-2">
+                      <button 
+                        onClick={() => {
+                          setStep('replicate-flow');
+                          setReplicateSubStep(1);
+                        }}
+                        className="bg-orange-500 text-white px-4 py-1.5 rounded text-xs font-bold hover:bg-orange-600 transition-colors"
+                      >
+                        新增剪辑任务
+                      </button>
+                      <button className="bg-orange-400 text-white px-4 py-1.5 rounded text-xs font-bold hover:bg-orange-500 transition-colors">新增多角色配音</button>
+                      <button className="bg-orange-400 text-white px-4 py-1.5 rounded text-xs font-bold hover:bg-orange-500 transition-colors">新增字幕合成</button>
+                      <button className="bg-orange-400 text-white px-4 py-1.5 rounded text-xs font-bold hover:bg-orange-500 transition-colors">账户详情</button>
+                      <button className="bg-blue-500 text-white px-4 py-1.5 rounded text-xs font-bold hover:bg-blue-600 transition-colors">批量下载</button>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button className="bg-green-500 text-white px-4 py-1.5 rounded text-xs font-bold hover:bg-green-600 transition-colors">导出</button>
+                      <button className="bg-blue-500 text-white px-4 py-1.5 rounded text-xs font-bold hover:bg-blue-600 transition-colors">下载日志</button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Table Area */}
+                <div className="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr className="bg-gray-50 border-b border-gray-100 text-gray-500 font-medium">
+                        <th className="p-4 w-10"><input type="checkbox" /></th>
+                        <th className="p-4">ID</th>
+                        <th className="p-4">原视频</th>
+                        <th className="p-4">主SKU</th>
+                        <th className="p-4">中文简称</th>
+                        <th className="p-4">原视频语种</th>
+                        <th className="p-4">目标语种</th>
+                        <th className="p-4">剪辑人</th>
+                        <th className="p-4">剪辑要求</th>
+                        <th className="p-4">提交时间</th>
+                        <th className="p-4">状态</th>
+                        <th className="p-4 text-center">操作</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-50">
+                      {[
+                        { id: '1072847', sku: 'LK22041984', name: '腰部拉伸器', lang: '中文', target: '西班牙语', editor: '曾宇', status: '待处理' },
+                        { id: '1072846', sku: 'LK22041984', name: '腰部拉伸器', lang: '中文', target: '西班牙语', editor: '曾宇', status: '待处理' },
+                        { id: '1072845', sku: 'LK22041984', name: '腰部拉伸器', lang: '中文', target: '西班牙语', editor: '曾宇', status: '待处理' },
+                        { id: '1072844', sku: 'LA60299560', name: '榨汁机', lang: '英文', target: '荷兰语', editor: '黄雅昕', status: '待处理' },
+                        { id: '1072843', sku: 'LE92145210', name: '焊条', lang: '西班牙语', target: '法语', editor: '张旭', status: '剪辑中' },
+                      ].map((row, idx) => (
+                        <tr key={idx} className="hover:bg-gray-50/50 transition-colors">
+                          <td className="p-4"><input type="checkbox" /></td>
+                          <td className="p-4 text-gray-400">{row.id}</td>
+                          <td className="p-4">
+                            <div className="w-16 aspect-video bg-gray-200 rounded relative overflow-hidden group">
+                              <img src={`https://picsum.photos/seed/${row.id}/100/60`} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                              <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                                <Play className="w-4 h-4 text-white fill-white" />
+                              </div>
+                            </div>
+                          </td>
+                          <td className="p-4 font-medium">{row.sku}</td>
+                          <td className="p-4 text-gray-600">{row.name}</td>
+                          <td className="p-4 text-gray-500">{row.lang}</td>
+                          <td className="p-4 text-gray-500">{row.target}</td>
+                          <td className="p-4 text-gray-500">
+                            <div className="flex flex-col">
+                              <span>{row.editor}</span>
+                              <span className="text-[10px] text-gray-300">【C5组员】</span>
+                            </div>
+                          </td>
+                          <td className="p-4 text-blue-500 cursor-pointer hover:underline">剪辑要求</td>
+                          <td className="p-4 text-gray-400">2026-04-15 16:26:02</td>
+                          <td className="p-4">
+                            <span className={`px-2 py-1 rounded text-[10px] font-bold ${
+                              row.status === '待处理' ? 'bg-gray-100 text-gray-500' : 'bg-blue-50 text-blue-600'
+                            }`}>
+                              {row.status}
+                            </span>
+                          </td>
+                          <td className="p-4 text-center">
+                            <button className="bg-red-50 text-red-500 px-3 py-1 rounded text-[10px] font-bold hover:bg-red-100 transition-colors">取消</button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  
+                  {/* Pagination (Mock) */}
+                  <div className="p-4 bg-gray-50 flex items-center justify-between text-[11px] text-gray-400">
+                    <div className="flex items-center gap-4">
+                      <span>共 147483 条</span>
+                      <select className="bg-white border border-gray-200 rounded px-2 py-0.5">
+                        <option>20条/页</option>
+                      </select>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <ChevronLeft className="w-3 h-3 cursor-pointer" />
+                      <span className="text-blue-600 font-bold">1</span>
+                      <span className="cursor-pointer hover:text-gray-600">2</span>
+                      <span className="cursor-pointer hover:text-gray-600">3</span>
+                      <span className="cursor-pointer hover:text-gray-600">4</span>
+                      <span className="cursor-pointer hover:text-gray-600">5</span>
+                      <span className="cursor-pointer hover:text-gray-600">6</span>
+                      <span>...</span>
+                      <span className="cursor-pointer hover:text-gray-600">7375</span>
+                      <ChevronRight className="w-3 h-3 cursor-pointer" />
+                      <span className="ml-4">前往</span>
+                      <input type="text" className="w-8 border border-gray-200 rounded px-1 py-0.5 text-center" defaultValue="1" />
+                      <span>页</span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </motion.div>
