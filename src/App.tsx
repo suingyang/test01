@@ -38,12 +38,13 @@ import {
   ExternalLink,
   Settings,
   ChevronLeft,
-  Users
+  Users,
+  AlertCircle
 } from 'lucide-react';
 
 // --- Types ---
 
-type AppStep = 'replicate-flow' | 'storyboard' | 'generating' | 'completed' | 'library-dashboard';
+type AppStep = 'replicate-flow' | 'planning' | 'storyboard' | 'generating' | 'completed' | 'library-dashboard' | 'failed';
 type GenerationMode = 'replicate' | 'new';
 type VideoType = 'mashup' | 'talking-head' | 'pure-showcase';
 
@@ -64,6 +65,14 @@ interface Segment {
   target_duration: number;
   description: string; // Summary
   clips: Clip[];
+}
+
+interface HistoricalTask {
+  id: string;
+  title: string;
+  createdAt: string;
+  status: 'generating' | 'completed' | 'failed';
+  user: string;
 }
 
 // --- Mock Data ---
@@ -97,6 +106,13 @@ const VOICES = [
   { id: 'v2', name: '知性女声', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Aneka', preview: '#' },
   { id: 'v3', name: '磁性大叔', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=George', preview: '#' },
   { id: 'v4', name: '甜美少女', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Lily', preview: '#' },
+];
+
+const MOCK_HISTORICAL_TASKS: HistoricalTask[] = [
+  { id: '1', title: '分析这个视频的脚本和分镜，并输出分析报告', createdAt: '2026.04.30', status: 'completed', user: '何元' },
+  { id: '2', title: '分析这个视频的脚本和分镜，并输出分析报告', createdAt: '2026.04.29', status: 'failed', user: '何元' },
+  { id: '3', title: '分析这个视频的脚本和分镜，并输出分析报告', createdAt: '2026.04.29', status: 'generating', user: '何元' },
+  { id: '4', title: '分析这个视频的脚本和分镜，并输出分析报告', createdAt: '2026.04.29', status: 'failed', user: '赖金凤' },
 ];
 
 const INITIAL_TIMELINE: Segment[] = [
@@ -166,7 +182,20 @@ export default function App() {
   const [isAiGenLoading, setIsAiGenLoading] = useState(false);
   const [isDownloadDropdownOpen, setIsDownloadDropdownOpen] = useState(false);
   const [dashboardTab, setDashboardTab] = useState<'ai-edit' | 'img-translate' | 'subtitle' | 'viral-replicate'>('viral-replicate');
+  const [historicalTasks, setHistoricalTasks] = useState<HistoricalTask[]>(MOCK_HISTORICAL_TASKS);
+  const [planningProgress, setPlanningProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const currentUser = "何元";
+  const myTasks = historicalTasks.filter(task => task.user === currentUser);
+
+  const handleRetry = (taskId: string) => {
+    setHistoricalTasks(prev => prev.map(t => 
+      t.id === taskId ? { ...t, status: 'generating' as const } : t
+    ));
+    setStep('planning');
+    setPlanningProgress(0);
+  };
 
   // Replicate Flow States
   const [replicateSubStep, setReplicateSubStep] = useState(1);
@@ -250,21 +279,38 @@ export default function App() {
   }, [uploadStatus]);
 
   const handleNext = () => {
-    if (step === 'mode-selection') {
-      if (mode === 'replicate') {
-        setStep('replicate-flow');
-        setReplicateSubStep(1);
-      } else {
-        setStep('input-details');
+    if (step === 'replicate-flow') {
+      if (replicateSubStep < 2) setReplicateSubStep(prev => prev + 1);
+      else {
+        setStep('planning');
+        setPlanningProgress(0);
       }
     }
-    else if (step === 'replicate-flow') {
-      if (replicateSubStep < 2) setReplicateSubStep(prev => prev + 1);
-      else setStep('storyboard');
+    else if (step === 'input-details') {
+      setStep('planning');
+      setPlanningProgress(0);
     }
-    else if (step === 'input-details') setStep('storyboard');
     else if (step === 'storyboard') setStep('generating');
   };
+
+  // Planning logic
+  useEffect(() => {
+    if (step === 'planning') {
+      const interval = setInterval(() => {
+        setPlanningProgress(prev => {
+          if (prev >= 100) {
+            clearInterval(interval);
+            setStep('storyboard');
+            return 100;
+          }
+          // Randomize increment slightly for a more "natural" feel
+          const increment = Math.random() > 0.7 ? 1 : 2;
+          return prev + increment;
+        });
+      }, 80);
+      return () => clearInterval(interval);
+    }
+  }, [step]);
 
   const handleBack = () => {
     if (step === 'replicate-flow') {
@@ -424,21 +470,38 @@ export default function App() {
       {/* Header */}
       <header className="border-bottom border-white/5 bg-[#16181d]/80 backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center shadow-lg shadow-orange-500/20">
+          <div 
+            className="flex items-center gap-3 cursor-pointer group"
+            onClick={() => {
+              setStep('replicate-flow');
+              setReplicateSubStep(1);
+            }}
+          >
+            <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center shadow-lg shadow-orange-500/20 group-hover:scale-105 transition-transform">
               <Sparkles className="w-5 h-5 text-white" />
             </div>
-            <h1 className="text-lg font-bold tracking-tight">AI Ad Remix <span className="text-white/40 font-normal ml-2">v1.0</span></h1>
+            <h1 className="text-lg font-bold tracking-tight group-hover:text-white transition-colors">
+              AI Ad Remix <span className="text-white/40 font-normal ml-2">v1.0</span>
+            </h1>
           </div>
           
           <div className="flex items-center gap-8">
             <nav className="hidden md:flex items-center gap-1">
               {['视频分析', '脚本规划', '混剪生成'].map((label, i) => {
-                const steps: AppStep[] = ['replicate-flow', 'storyboard', 'generating'];
-                const isActive = steps.indexOf(step) >= i;
+                const stepGroups: AppStep[][] = [
+                  ['replicate-flow', 'input-details' as any], 
+                  ['planning', 'storyboard'], 
+                  ['generating', 'completed']
+                ];
+                const isActive = stepGroups.slice(i).some(group => group.includes(step));
+                const isCurrent = stepGroups[i].includes(step);
+                
                 return (
                   <div key={label} className="flex items-center">
-                    <span className={`text-xs font-medium px-3 py-1 rounded-full transition-colors ${isActive ? 'text-orange-400 bg-orange-400/10' : 'text-white/30'}`}>
+                    <span className={`text-xs font-medium px-3 py-1 rounded-full transition-colors ${
+                      isCurrent ? 'text-orange-400 bg-orange-400/10' : 
+                      isActive ? 'text-orange-400/60' : 'text-white/30'
+                    }`}>
                       {label}
                     </span>
                     {i < 2 && <ChevronRight className="w-3 h-3 text-white/10 mx-1" />}
@@ -682,6 +745,63 @@ export default function App() {
                   </div>
                 )}
               </div>
+
+              {/* Session History Section */}
+              {replicateSubStep === 1 && (
+                <div className="mt-12 space-y-4">
+                  <h3 className="text-xl font-bold flex items-center gap-2">
+                    会话历史
+                  </h3>
+                  <div className="space-y-3">
+                    {myTasks.map((task) => (
+                      <div 
+                        key={task.id}
+                        onClick={() => {
+                          if (task.status === 'generating') {
+                            setStep('planning');
+                            setPlanningProgress(Math.floor(Math.random() * 80) + 10);
+                          } else if (task.status === 'completed') {
+                            setStep('storyboard');
+                          } else if (task.status === 'failed') {
+                            setStep('failed');
+                          }
+                        }}
+                        className="bg-[#16181d] border border-white/5 hover:border-white/20 rounded-2xl p-5 flex items-center gap-5 cursor-pointer group transition-all"
+                      >
+                        <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center group-hover:bg-white/10 transition-colors">
+                          <Clock className="w-5 h-5 text-white/40 group-hover:text-white/60" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="text-sm font-bold text-white/80 group-hover:text-white mb-1 truncate">{task.title}</h4>
+                          <div className="flex items-center gap-3 text-xs text-white/30">
+                            <span>{task.createdAt}</span>
+                            <span>{task.user}</span>
+                            <span className={`font-bold ${
+                              task.status === 'completed' ? 'text-green-500' : 
+                              task.status === 'generating' ? 'text-orange-500' : 'text-red-500'
+                            }`}>
+                              {task.status === 'completed' ? '分析完成' : 
+                               task.status === 'generating' ? '生成中' : '生成失败'}
+                            </span>
+                          </div>
+                        </div>
+                        {task.status === 'failed' && (
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRetry(task.id);
+                            }}
+                            className="px-4 py-2 bg-orange-500/10 hover:bg-orange-500/20 text-orange-500 rounded-lg text-xs font-bold transition-all border border-orange-500/20"
+                          >
+                            重试
+                          </button>
+                        )}
+                        <ArrowRight className="w-4 h-4 text-white/10 group-hover:text-white/40 transition-all group-hover:translate-x-1" />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </motion.div>
           )}
 
@@ -724,6 +844,66 @@ export default function App() {
                   <ArrowRight className="w-5 h-5" />
                 </button>
               </div>
+            </motion.div>
+          )}
+
+          {step === 'planning' && (
+            <motion.div 
+              key="planning"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 1.05 }}
+              className="max-w-xl mx-auto text-center py-20"
+            >
+              <div className="relative w-32 h-32 mx-auto mb-8">
+                <svg className="w-full h-full transform -rotate-90">
+                  <circle cx="64" cy="64" r="60" stroke="currentColor" strokeWidth="8" fill="transparent" className="text-white/5" />
+                  <circle 
+                    cx="64" 
+                    cy="64" 
+                    r="60" 
+                    stroke="currentColor" 
+                    strokeWidth="8" 
+                    fill="transparent" 
+                    strokeDasharray={377}
+                    strokeDashoffset={377 - (377 * planningProgress) / 100}
+                    className="text-orange-500 transition-all duration-300 ease-out"
+                  />
+                </svg>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="text-2xl font-bold">{planningProgress}%</span>
+                </div>
+              </div>
+
+              <h2 
+                className="text-3xl font-bold mb-4 cursor-pointer hover:text-red-400 transition-colors"
+                onClick={() => setStep('failed')}
+                title="点击模拟生成失败"
+              >
+                AI 正在为您规划脚本
+              </h2>
+              <p className="text-white/50 mb-8">正在根据产品卖点和视频风格，智能生成分镜建议...</p>
+              
+              <div className="space-y-3 max-w-xs mx-auto text-left pl-8 mb-12">
+                {[
+                  { label: '分析产品卖点数据', done: planningProgress > 25 },
+                  { label: '智能匹配 AIDA 结构', done: planningProgress > 50 },
+                  { label: '生成分镜镜头描述', done: planningProgress > 75 },
+                  { label: '优化口播文案细节', done: planningProgress > 95 },
+                ].map((item, i) => (
+                  <div key={i} className={`flex items-center gap-3 text-sm transition-colors ${item.done ? 'text-white' : 'text-white/20'}`}>
+                    {item.done ? <CheckCircle2 className="w-4 h-4 text-green-500" /> : <div className="w-4 h-4 rounded-full border border-white/20 animate-pulse" />}
+                    <span>{item.label}</span>
+                  </div>
+                ))}
+              </div>
+
+              <button 
+                onClick={() => setStep('replicate-flow')}
+                className="px-6 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-white/40 hover:text-white/60 text-xs font-medium transition-all flex items-center gap-2 mx-auto"
+              >
+                <ArrowLeft className="w-3 h-3" /> 取消并返回首页
+              </button>
             </motion.div>
           )}
 
@@ -1154,116 +1334,153 @@ export default function App() {
             </motion.div>
           )}
 
-          {step === 'generating' && (
+          {['generating', 'completed', 'failed'].includes(step) && (
             <motion.div 
-              key="generating"
+              key="process-status"
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 1.05 }}
               className="max-w-xl mx-auto text-center py-20"
             >
               <div className="relative w-32 h-32 mx-auto mb-8">
-                <svg className="w-full h-full transform -rotate-90">
-                  <circle cx="64" cy="64" r="60" stroke="currentColor" strokeWidth="8" fill="transparent" className="text-white/5" />
-                  <circle 
-                    cx="64" 
-                    cy="64" 
-                    r="60" 
-                    stroke="currentColor" 
-                    strokeWidth="8" 
-                    fill="transparent" 
-                    strokeDasharray={377}
-                    strokeDashoffset={377 - (377 * progress) / 100}
-                    className="text-orange-500 transition-all duration-300 ease-out"
-                  />
-                </svg>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-2xl font-bold">{progress}%</span>
-                </div>
-              </div>
-
-              <h2 className="text-3xl font-bold mb-4">正在混剪你的广告视频</h2>
-              <p className="text-white/50 mb-8">正在合成素材、生成配音并添加特效，请稍候...</p>
-              
-              <div className="space-y-3 max-w-xs mx-auto">
-                {[
-                  { label: '分析脚本结构', done: progress > 20 },
-                  { label: '匹配视觉素材', done: progress > 45 },
-                  { label: '生成 AI 配音', done: progress > 70 },
-                  { label: '渲染最终视频', done: progress > 90 },
-                ].map((item, i) => (
-                  <div key={i} className={`flex items-center gap-3 text-sm transition-colors ${item.done ? 'text-white' : 'text-white/20'}`}>
-                    {item.done ? <CheckCircle2 className="w-4 h-4 text-green-500" /> : <div className="w-4 h-4 rounded-full border border-white/20 animate-pulse" />}
-                    <span>{item.label}</span>
+                {step === 'generating' ? (
+                  <>
+                    <svg className="w-full h-full transform -rotate-90">
+                      <circle cx="64" cy="64" r="60" stroke="currentColor" strokeWidth="8" fill="transparent" className="text-white/5" />
+                      <circle 
+                        cx="64" 
+                        cy="64" 
+                        r="60" 
+                        stroke="currentColor" 
+                        strokeWidth="8" 
+                        fill="transparent" 
+                        strokeDasharray={377}
+                        strokeDashoffset={377 - (377 * progress) / 100}
+                        className="text-orange-500 transition-all duration-300 ease-out"
+                      />
+                    </svg>
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <span className="text-2xl font-bold">{progress}%</span>
+                    </div>
+                  </>
+                ) : step === 'completed' ? (
+                  <div className="w-full h-full bg-green-500/10 rounded-full flex items-center justify-center border border-green-500/20">
+                    <CheckCircle2 className="w-12 h-12 text-green-500" />
                   </div>
-                ))}
+                ) : (
+                  <div className="w-full h-full bg-red-500/10 rounded-full flex items-center justify-center border border-red-500/20">
+                    <AlertCircle className="w-12 h-12 text-red-500" />
+                  </div>
+                )}
               </div>
-            </motion.div>
-          )}
 
-          {step === 'completed' && (
-            <motion.div 
-              key="completed"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="max-w-5xl mx-auto px-6 py-20"
-            >
-              <div className="flex items-center justify-between mb-12">
-                <h2 className="text-4xl font-bold tracking-tight">生成完成！</h2>
-                <div className="relative">
-                  <button 
-                    onClick={() => setIsDownloadDropdownOpen(!isDownloadDropdownOpen)}
-                    className="px-8 py-3.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-sm font-bold shadow-lg shadow-orange-500/20 transition-all flex items-center gap-2"
-                  >
-                    到视频库下载 <ChevronDown className={`w-4 h-4 transition-transform ${isDownloadDropdownOpen ? 'rotate-180' : ''}`} />
-                  </button>
-                  
-                  <AnimatePresence>
-                    {isDownloadDropdownOpen && (
-                      <motion.div 
-                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                        className="absolute right-0 mt-3 w-56 bg-[#1c1e24] border border-white/10 rounded-2xl overflow-hidden shadow-2xl z-50"
+              <h2 
+                className={`text-3xl font-bold mb-4 ${step === 'generating' ? 'cursor-pointer hover:text-red-400 transition-colors' : ''}`}
+                onClick={() => step === 'generating' && setStep('failed')}
+                title={step === 'generating' ? "点击模拟生成失败" : undefined}
+              >
+                {step === 'generating' ? 'AI 正在为您混剪生成' : 
+                 step === 'completed' ? '视频生成完成！' : '生成失败'}
+              </h2>
+              <p className="text-white/50 mb-12 max-w-sm mx-auto">
+                {step === 'generating' ? '正在智能合成镜头、匹配转场与音效，请耐心等待...' : 
+                 step === 'completed' ? '您的视频已准备就绪，可以同步至视频库。' : '抱歉，我们在处理视频内容时遇到了预料之外的错误。'}
+              </p>
+              
+              <div className="flex justify-center gap-4">
+                {step === 'completed' && (
+                  <>
+                    <button 
+                      onClick={() => setStep('replicate-flow')}
+                      className="px-8 py-3.5 rounded-xl bg-white/5 hover:bg-white/10 text-white font-bold transition-all border border-white/10"
+                    >
+                      回首页
+                    </button>
+                    <div className="relative text-left">
+                      <button 
+                        onClick={() => setIsDownloadDropdownOpen(!isDownloadDropdownOpen)}
+                        className="px-8 py-3.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-sm font-bold shadow-lg shadow-orange-500/20 transition-all flex items-center gap-2"
                       >
-                        {[
-                          { label: '独立站', icon: <Globe className="w-4 h-4" /> },
-                          { label: 'TikTok', icon: <Video className="w-4 h-4" /> },
-                          { label: '亚马逊', icon: <ShoppingBag className="w-4 h-4" /> },
-                          { label: '品牌视频库', icon: <Library className="w-4 h-4" /> },
-                        ].map((option) => (
-                          <button
-                            key={option.label}
-                            onClick={() => {
-                              setIsDownloadDropdownOpen(false);
-                              // Navigate to dashboard
-                              setStep('library-dashboard');
-                              setDashboardTab('viral-replicate');
-                            }}
-                            className="w-full flex items-center gap-3 px-5 py-4 text-sm font-medium text-white/60 hover:text-white hover:bg-white/5 transition-all text-left"
+                        到视频库下载 <ChevronDown className={`w-4 h-4 transition-transform ${isDownloadDropdownOpen ? 'rotate-180' : ''}`} />
+                      </button>
+                      
+                      <AnimatePresence>
+                        {isDownloadDropdownOpen && (
+                          <motion.div 
+                            initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                            className="absolute left-1/2 -translate-x-1/2 bottom-full mb-3 w-56 bg-[#1c1e24] border border-white/10 rounded-2xl overflow-hidden shadow-2xl z-50 transform -translate-x-1/2"
                           >
-                            <span className="text-orange-500/60">{option.icon}</span>
-                            {option.label}
-                          </button>
-                        ))}
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
+                            {[
+                              { label: '独立站', icon: <Globe className="w-4 h-4" /> },
+                              { label: 'TikTok', icon: <Video className="w-4 h-4" /> },
+                              { label: '亚马逊', icon: <ShoppingBag className="w-4 h-4" /> },
+                              { label: '品牌视频库', icon: <Library className="w-4 h-4" /> },
+                            ].map((option) => (
+                              <button
+                                key={option.label}
+                                onClick={() => {
+                                  setIsDownloadDropdownOpen(false);
+                                  setStep('library-dashboard');
+                                  setDashboardTab('viral-replicate');
+                                }}
+                                className="w-full flex items-center gap-3 px-5 py-4 text-sm font-medium text-white/60 hover:text-white hover:bg-white/5 transition-all text-left"
+                              >
+                                <span className="text-orange-500/60">{option.icon}</span>
+                                {option.label}
+                              </button>
+                            ))}
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  </>
+                )}
+                {step === 'generating' && (
+                  <button 
+                    onClick={() => setStep('replicate-flow')}
+                    className="px-8 py-3.5 rounded-xl bg-white/5 hover:bg-white/10 text-white/40 hover:text-white font-bold transition-all border border-white/10"
+                  >
+                    取消并返回
+                  </button>
+                )}
+                {step === 'failed' && (
+                  <>
+                    <button 
+                      onClick={() => setStep('replicate-flow')}
+                      className="px-8 py-3.5 rounded-xl bg-white/5 hover:bg-white/10 text-white font-bold transition-all border border-white/10"
+                    >
+                      回首页
+                    </button>
+                    <button 
+                      onClick={() => {
+                        setStep('generating');
+                        setProgress(0);
+                      }}
+                      className="px-8 py-3.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-bold shadow-lg shadow-orange-500/20 transition-all flex items-center gap-2"
+                    >
+                      <RotateCcw className="w-4 h-4" /> 重新尝试
+                    </button>
+                  </>
+                )}
               </div>
 
-              <div className="relative aspect-video bg-black rounded-[40px] overflow-hidden shadow-2xl border border-white/5 group">
-                <img 
-                  src="https://picsum.photos/seed/final/1920/1080" 
-                  alt="Final Result" 
-                  className="w-full h-full object-cover opacity-80" 
-                  referrerPolicy="no-referrer" 
-                />
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <button className="w-20 h-20 bg-white/10 hover:bg-white/20 backdrop-blur-xl rounded-full flex items-center justify-center transition-all group-hover:scale-110">
-                    <Play className="w-8 h-8 text-white fill-white" />
-                  </button>
+              {step === 'generating' && (
+                <div className="space-y-3 max-w-xs mx-auto text-left pl-8 mt-12">
+                  {[
+                    { label: '智能提取关键帧', done: progress > 25 },
+                    { label: '自动匹配转场特效', done: progress > 50 },
+                    { label: '同步多角色配音', done: progress > 75 },
+                    { label: '渲染输出高清视频', done: progress > 95 },
+                  ].map((item, i) => (
+                    <div key={i} className={`flex items-center gap-3 text-sm transition-colors ${item.done ? 'text-white' : 'text-white/20'}`}>
+                      {item.done ? <CheckCircle2 className="w-4 h-4 text-green-500" /> : <div className="w-4 h-4 rounded-full border border-white/20 animate-pulse" />}
+                      <span>{item.label}</span>
+                    </div>
+                  ))}
                 </div>
-              </div>
+              )}
             </motion.div>
           )}
 
